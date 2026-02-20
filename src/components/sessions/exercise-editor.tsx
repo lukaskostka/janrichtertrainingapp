@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ExerciseBlock } from '@/components/sessions/exercise-block'
 import { AddExerciseSheet } from '@/components/sessions/add-exercise-sheet'
 import { LoadTemplateSheet } from '@/components/sessions/load-template-sheet'
+import { getSupersetLabels, groupExercisesForRender } from '@/lib/utils'
 import {
   addSessionExercise,
   getLastExerciseSets,
@@ -185,59 +186,9 @@ export function ExerciseEditor({ sessionId, clientId, initialExercises }: Exerci
     }
   }, [exercises])
 
-  const supersetLabels = useMemo(() => {
-    const labels = new Map<string, string>()
-    const groupMap = new Map<number, string[]>()
+  const supersetLabels = useMemo(() => getSupersetLabels(exercises), [exercises])
 
-    for (const ex of exercises) {
-      if (ex.superset_group !== null) {
-        if (!groupMap.has(ex.superset_group)) {
-          groupMap.set(ex.superset_group, [])
-        }
-        groupMap.get(ex.superset_group)!.push(ex.id)
-      }
-    }
-
-    const sortedGroups = Array.from(groupMap.keys()).sort((a, b) => a - b)
-    sortedGroups.forEach((group, groupIdx) => {
-      const letter = String.fromCharCode(65 + groupIdx)
-      const ids = groupMap.get(group)!
-      ids.forEach((id, idx) => {
-        labels.set(id, `${letter}${idx + 1}`)
-      })
-    })
-
-    return labels
-  }, [exercises])
-
-  // Group exercises for rendering
-  const renderGroups: { type: 'single' | 'superset'; exercises: ExerciseRecord[]; group?: number }[] = []
-  let currentSupersetGroup: number | null = null
-  let currentGroupExercises: ExerciseRecord[] = []
-
-  for (const ex of exercises) {
-    if (ex.superset_group !== null) {
-      if (currentSupersetGroup === ex.superset_group) {
-        currentGroupExercises.push(ex)
-      } else {
-        if (currentGroupExercises.length > 0) {
-          renderGroups.push({ type: 'superset', exercises: currentGroupExercises, group: currentSupersetGroup! })
-        }
-        currentSupersetGroup = ex.superset_group
-        currentGroupExercises = [ex]
-      }
-    } else {
-      if (currentGroupExercises.length > 0) {
-        renderGroups.push({ type: 'superset', exercises: currentGroupExercises, group: currentSupersetGroup! })
-        currentSupersetGroup = null
-        currentGroupExercises = []
-      }
-      renderGroups.push({ type: 'single', exercises: [ex] })
-    }
-  }
-  if (currentGroupExercises.length > 0) {
-    renderGroups.push({ type: 'superset', exercises: currentGroupExercises, group: currentSupersetGroup! })
-  }
+  const renderGroups = useMemo(() => groupExercisesForRender(exercises), [exercises])
 
   return (
     <div>

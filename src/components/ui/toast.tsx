@@ -57,7 +57,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast, toast: showToast }}>
       {children}
-      <div className="fixed bottom-20 left-4 right-4 z-[100] flex flex-col items-center gap-2 pointer-events-none">
+      <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-20 left-4 right-4 z-[100] flex flex-col items-center gap-2 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
             <motion.div
@@ -84,6 +84,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <button
                 onClick={() => removeToast(toast.id)}
                 className="flex-shrink-0 opacity-60 hover:opacity-100"
+                aria-label="Zavřít upozornění"
               >
                 <X className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>

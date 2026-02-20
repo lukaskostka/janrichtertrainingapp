@@ -30,7 +30,7 @@ export function InBodyPhotos({ paths }: InBodyPhotosProps) {
             onClick={() => setExpanded(url)}
             className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-border"
           >
-            <Image src={url} alt="InBody foto" fill className="object-cover" sizes="64px" />
+            <Image src={url} alt={`InBody měření – foto ${i + 1}`} fill className="object-cover" sizes="64px" loading="lazy" />
           </button>
         ))}
       </div>
@@ -49,8 +49,9 @@ export function InBodyPhotos({ paths }: InBodyPhotosProps) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={expanded}
-            alt="InBody fotka - zvětšená"
+            alt="InBody měření – zvětšená fotografie"
             className="max-h-[85vh] max-w-full rounded-xl object-contain"
+            loading="lazy"
             onClick={(e) => e.stopPropagation()}
           />
         </div>

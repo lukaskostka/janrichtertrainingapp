@@ -1,7 +1,13 @@
 'use server'
 
 import { createAuthenticatedClient } from '@/lib/supabase/server'
+import { z } from 'zod'
 import type { ExerciseSet } from '@/types'
+
+const exerciseSetSchema = z.array(z.object({
+  reps: z.number().int().nonnegative(),
+  weight: z.number().nonnegative(),
+}))
 
 type SessionExerciseWithExercise = {
   id: string
@@ -37,10 +43,11 @@ export async function addSessionExercise(sessionId: string, exerciseId: string, 
 }
 
 export async function updateSessionExerciseSets(id: string, sets: { reps: number; weight: number }[]) {
+  const validatedSets = exerciseSetSchema.parse(sets)
   const { supabase } = await createAuthenticatedClient()
   const { error } = await supabase
     .from('session_exercises')
-    .update({ sets })
+    .update({ sets: validatedSets })
     .eq('id', id)
   if (error) throw error
 }

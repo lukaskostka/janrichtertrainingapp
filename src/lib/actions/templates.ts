@@ -2,7 +2,19 @@
 
 import { createAuthenticatedClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import type { TemplateExercise } from '@/types'
+
+const templateExerciseSchema = z.array(z.object({
+  exercise_id: z.string().uuid(),
+  exercise_name: z.string().optional(),
+  sets_config: z.array(z.object({
+    reps: z.number().int().nonnegative(),
+    weight: z.number().nonnegative(),
+  })),
+  order_index: z.number().int().nonnegative(),
+  superset_group: z.number().int().nullable(),
+}))
 
 export async function getTemplates(): Promise<import('@/types').WorkoutTemplate[]> {
   const { supabase } = await createAuthenticatedClient()
@@ -20,12 +32,13 @@ export async function getTemplate(id: string): Promise<import('@/types').Workout
 
 export async function createTemplateAction(name: string, category: string | null, exercises: TemplateExercise[]) {
   const { supabase, user } = await createAuthenticatedClient()
+  const validatedExercises = templateExerciseSchema.parse(exercises)
 
   const { error } = await supabase.from('workout_templates').insert({
     trainer_id: user.id,
     name,
     category,
-    exercises,
+    exercises: validatedExercises,
   })
   if (error) throw error
   revalidatePath('/templates')
@@ -33,10 +46,11 @@ export async function createTemplateAction(name: string, category: string | null
 
 export async function updateTemplateAction(id: string, name: string, category: string | null, exercises: TemplateExercise[]) {
   const { supabase } = await createAuthenticatedClient()
+  const validatedExercises = templateExerciseSchema.parse(exercises)
   const { error } = await supabase.from('workout_templates').update({
     name,
     category,
-    exercises,
+    exercises: validatedExercises,
   }).eq('id', id)
   if (error) throw error
   revalidatePath('/templates')

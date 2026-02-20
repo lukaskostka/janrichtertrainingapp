@@ -3,6 +3,19 @@
 import { createAuthenticatedClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])
+
+function validatePhoto(photo: File) {
+  if (photo.size > MAX_PHOTO_SIZE_BYTES) {
+    throw new Error(`Fotka "${photo.name}" překračuje maximální velikost 10 MB`)
+  }
+  const ext = (photo.name.split('.').pop() ?? '').toLowerCase()
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    throw new Error(`Nepodporovaný formát fotky "${photo.name}". Povolené: ${[...ALLOWED_EXTENSIONS].join(', ')}`)
+  }
+}
+
 export async function getInBodyRecords(clientId: string): Promise<import('@/types').InBodyRecord[]> {
   const { supabase } = await createAuthenticatedClient()
   const { data, error } = await supabase
@@ -32,8 +45,9 @@ export async function createInBodyRecord(clientId: string, formData: FormData) {
   const photos = formData.getAll('photos') as File[]
   for (const photo of photos) {
     if (photo.size === 0) continue
-    const ext = photo.name.split('.').pop() ?? 'jpg'
-    const path = `inbody/${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    validatePhoto(photo)
+    const ext = (photo.name.split('.').pop() ?? 'jpg').toLowerCase()
+    const path = `inbody/${clientId}/${Date.now()}-${crypto.randomUUID()}.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('inbody-photos')
       .upload(path, photo)
@@ -70,8 +84,9 @@ export async function updateInBodyRecord(id: string, clientId: string, formData:
   const photos = formData.getAll('photos') as File[]
   for (const photo of photos) {
     if (photo.size === 0) continue
-    const ext = photo.name.split('.').pop() ?? 'jpg'
-    const path = `inbody/${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    validatePhoto(photo)
+    const ext = (photo.name.split('.').pop() ?? 'jpg').toLowerCase()
+    const path = `inbody/${clientId}/${Date.now()}-${crypto.randomUUID()}.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('inbody-photos')
       .upload(path, photo)
@@ -138,12 +153,12 @@ export async function getInBodyPhotoUrl(path: string): Promise<string> {
 
 export async function getInBodyPhotoUrls(paths: string[]): Promise<string[]> {
   const { supabase } = await createAuthenticatedClient()
-  const urls: string[] = []
-  for (const path of paths) {
-    const { data, error } = await supabase.storage
-      .from('inbody-photos')
-      .createSignedUrl(path, 3600)
-    if (!error && data) urls.push(data.signedUrl)
-  }
-  return urls
+  const results = await Promise.all(
+    paths.map((path) =>
+      supabase.storage.from('inbody-photos').createSignedUrl(path, 3600)
+    )
+  )
+  return results
+    .filter((r) => !r.error && r.data)
+    .map((r) => r.data!.signedUrl)
 }

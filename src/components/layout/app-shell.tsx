@@ -15,7 +15,9 @@ export function AppShell({ children }: AppShellProps) {
       const last = Number(sessionStorage.getItem(key) || 0)
       if (now - last < 10 * 60 * 1000) return
       sessionStorage.setItem(key, String(now))
-      fetch('/api/sessions/auto-complete', { method: 'POST' }).catch(() => {})
+      fetch('/api/sessions/auto-complete', { method: 'POST' }).catch((err) => {
+        console.warn('[auto-complete] Nepodařilo se spustit auto-complete:', err)
+      })
     } catch {
       // Ignore storage access issues
     }

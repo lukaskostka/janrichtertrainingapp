@@ -51,6 +51,13 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params
+
+  // Validate token is UUID format
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!UUID_REGEX.test(token)) {
+    return NextResponse.json({ error: 'Invalid token format' }, { status: 400 })
+  }
+
   const rateLimit = checkRateLimit(token)
   if (!rateLimit.allowed) {
     return NextResponse.json(

@@ -7,17 +7,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { getSession } from '@/lib/actions/sessions'
 import type { SessionWithDetails } from '@/types'
 import { getSessionExercises } from '@/lib/actions/session-exercises'
-import { formatDateTime, formatTime } from '@/lib/utils'
+import { formatDateTime, formatTime, getSupersetLabels, groupExercisesForRender } from '@/lib/utils'
 import { toPragueDate } from '@/lib/datetime'
-import { SESSION_STATUS_LABELS, SESSION_DURATION_MINUTES } from '@/lib/constants'
+import { SESSION_STATUS_LABELS, SESSION_STATUS_VARIANTS, SESSION_DURATION_MINUTES } from '@/lib/constants'
 import { SessionDetailActions } from './session-detail-actions'
-
-const statusVariant: Record<string, 'default' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'default',
-  completed: 'success',
-  cancelled: 'danger',
-  no_show: 'warning',
-}
 
 export default async function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -47,7 +40,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
           <CardContent className="space-y-3 py-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-text-secondary">Stav</span>
-              <Badge variant={statusVariant[session.status]}>
+              <Badge variant={SESSION_STATUS_VARIANTS[session.status]}>
                 {SESSION_STATUS_LABELS[session.status]}
               </Badge>
             </div>
@@ -112,49 +105,8 @@ type ExerciseWithRelation = {
 }
 
 function ReadOnlyExercises({ exercises }: { exercises: ExerciseWithRelation[] }) {
-  const groupMap = new Map<number, string[]>()
-  for (const ex of exercises) {
-    if (ex.superset_group !== null) {
-      if (!groupMap.has(ex.superset_group)) groupMap.set(ex.superset_group, [])
-      groupMap.get(ex.superset_group)!.push(ex.id)
-    }
-  }
-  const sortedGroups = Array.from(groupMap.keys()).sort((a, b) => a - b)
-  const labels = new Map<string, string>()
-  sortedGroups.forEach((group, groupIdx) => {
-    const letter = String.fromCharCode(65 + groupIdx)
-    groupMap.get(group)!.forEach((id, idx) => {
-      labels.set(id, `${letter}${idx + 1}`)
-    })
-  })
-
-  const renderGroups: { type: 'single' | 'superset'; exercises: ExerciseWithRelation[]; group?: number }[] = []
-  let currentGroup: number | null = null
-  let currentGroupExs: ExerciseWithRelation[] = []
-
-  for (const ex of exercises) {
-    if (ex.superset_group !== null) {
-      if (currentGroup === ex.superset_group) {
-        currentGroupExs.push(ex)
-      } else {
-        if (currentGroupExs.length > 0) {
-          renderGroups.push({ type: 'superset', exercises: currentGroupExs, group: currentGroup! })
-        }
-        currentGroup = ex.superset_group
-        currentGroupExs = [ex]
-      }
-    } else {
-      if (currentGroupExs.length > 0) {
-        renderGroups.push({ type: 'superset', exercises: currentGroupExs, group: currentGroup! })
-        currentGroup = null
-        currentGroupExs = []
-      }
-      renderGroups.push({ type: 'single', exercises: [ex] })
-    }
-  }
-  if (currentGroupExs.length > 0) {
-    renderGroups.push({ type: 'superset', exercises: currentGroupExs, group: currentGroup! })
-  }
+  const labels = getSupersetLabels(exercises)
+  const renderGroups = groupExercisesForRender(exercises)
 
   function ExerciseCard({ ex }: { ex: ExerciseWithRelation }) {
     const sets = ex.sets || []

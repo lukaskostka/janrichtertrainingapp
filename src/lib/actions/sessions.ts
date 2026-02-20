@@ -184,7 +184,7 @@ export async function deleteSession(id: string) {
 
 export async function deleteFutureRecurringSessions(recurrenceGroupId: string, afterDate: string) {
   const { supabase } = await createAuthenticatedClient()
-  // Get sessions to delete
+  // Get session IDs to delete exercises for, then batch delete sessions
   const { data: sessions } = await supabase
     .from('sessions')
     .select('id')
@@ -192,11 +192,10 @@ export async function deleteFutureRecurringSessions(recurrenceGroupId: string, a
     .gt('scheduled_at', afterDate)
     .eq('status', 'scheduled')
 
-  if (sessions) {
-    for (const s of sessions) {
-      await supabase.from('session_exercises').delete().eq('session_id', s.id)
-      await supabase.from('sessions').delete().eq('id', s.id)
-    }
+  if (sessions && sessions.length > 0) {
+    const sessionIds = sessions.map((s) => s.id)
+    await supabase.from('session_exercises').delete().in('session_id', sessionIds)
+    await supabase.from('sessions').delete().in('id', sessionIds)
   }
   revalidatePath('/calendar')
   revalidatePath('/clients')

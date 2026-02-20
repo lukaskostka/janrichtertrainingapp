@@ -6,15 +6,8 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StaggerList, StaggerItem, ScaleTap } from '@/components/ui/motion'
 import { formatTime } from '@/lib/utils'
-import { SESSION_STATUS_LABELS } from '@/lib/constants'
-import type { SessionWithClient, SessionStatus } from '@/types'
-
-const statusVariant: Record<SessionStatus, 'default' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'default',
-  completed: 'success',
-  cancelled: 'danger',
-  no_show: 'warning',
-}
+import { SESSION_STATUS_LABELS, SESSION_STATUS_VARIANTS } from '@/lib/constants'
+import type { SessionWithClient } from '@/types'
 
 interface TodaySessionsProps {
   sessions: SessionWithClient[]
@@ -36,7 +29,7 @@ export function TodaySessions({ sessions }: TodaySessionsProps) {
                 <p className="font-medium text-text-primary truncate">
                   {session.clients?.name}
                 </p>
-                <Badge variant={statusVariant[session.status]}>
+                <Badge variant={SESSION_STATUS_VARIANTS[session.status]}>
                   {SESSION_STATUS_LABELS[session.status]}
                 </Badge>
               </div>

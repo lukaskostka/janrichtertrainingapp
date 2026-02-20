@@ -28,3 +28,10 @@ export const SESSION_STATUS_LABELS: Record<string, string> = {
   cancelled: 'Zrušeno',
   no_show: 'Nedostavil se',
 }
+
+export const SESSION_STATUS_VARIANTS: Record<string, 'default' | 'success' | 'warning' | 'danger'> = {
+  scheduled: 'default',
+  completed: 'success',
+  cancelled: 'danger',
+  no_show: 'warning',
+}
