@@ -50,12 +50,6 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 {formatDateTime(session.scheduled_at)} – {formatTime(endTime)}
               </span>
             </div>
-            {session.location && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-text-secondary">Místo</span>
-                <span className="text-sm text-text-primary">{session.location}</span>
-              </div>
-            )}
             {pkg && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-text-secondary">Balíček</span>
@@ -83,8 +77,8 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
           exercises={(exercises || []) as ExerciseWithRelation[]}
         />
 
-        {/* Read-only exercises for completed/cancelled/no_show sessions */}
-        {session.status !== 'scheduled' && exercises && exercises.length > 0 && (
+        {/* Read-only exercises for cancelled/no_show sessions (completed sessions use the editor above) */}
+        {(session.status === 'cancelled' || session.status === 'no_show') && exercises && exercises.length > 0 && (
           <ReadOnlyExercises exercises={exercises as ExerciseWithRelation[]} />
         )}
       </div>

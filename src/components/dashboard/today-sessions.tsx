@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, MapPin } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StaggerList, StaggerItem, ScaleTap } from '@/components/ui/motion'
@@ -33,15 +33,9 @@ export function TodaySessions({ sessions }: TodaySessionsProps) {
                   {SESSION_STATUS_LABELS[session.status]}
                 </Badge>
               </div>
-              <div className="mt-1 flex items-center gap-3 text-sm text-text-secondary">
-                <span>{formatTime(session.scheduled_at)}</span>
-                {session.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" strokeWidth={1.5} />
-                    {session.location}
-                  </span>
-                )}
-              </div>
+              <p className="mt-1 text-sm text-text-secondary">
+                {formatTime(session.scheduled_at)}
+              </p>
             </div>
           </Card>
         </Link>

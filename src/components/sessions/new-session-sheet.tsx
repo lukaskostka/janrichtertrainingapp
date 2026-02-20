@@ -30,7 +30,6 @@ export function NewSessionSheet({ isOpen, onClose, prefilledDate, onCreated }: N
   const [loadingClients, setLoadingClients] = useState(true)
   const [clientId, setClientId] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
-  const [location, setLocation] = useState('')
   const [notes, setNotes] = useState('')
   const [noPackageWarning, setNoPackageWarning] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -79,7 +78,6 @@ export function NewSessionSheet({ isOpen, onClose, prefilledDate, onCreated }: N
     setLoadingClients(true)
     setClientId('')
     setScheduledAt('')
-    setLocation('')
     setNotes('')
     setNoPackageWarning(false)
     setError(null)
@@ -129,7 +127,6 @@ export function NewSessionSheet({ isOpen, onClose, prefilledDate, onCreated }: N
       await createSessionDirect({
         client_id: clientId,
         scheduled_at: scheduledUtc,
-        location: location || undefined,
         notes: notes || undefined,
       })
       hapticSuccess()
@@ -216,17 +213,6 @@ export function NewSessionSheet({ isOpen, onClose, prefilledDate, onCreated }: N
               </p>
             </div>
           )}
-
-          <Input
-            id="new_session_location"
-            label="Místo"
-            placeholder="Např. Gym XY"
-            value={location}
-            onChange={(e) => {
-              setLocation(e.target.value)
-              setIsDirty(true)
-            }}
-          />
 
           <Textarea
             id="new_session_notes"

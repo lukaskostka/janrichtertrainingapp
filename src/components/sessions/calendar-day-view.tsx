@@ -104,9 +104,6 @@ export function CalendarDayView({ sessions, currentDate, onDateChange }: Calenda
               <p className="text-xs text-text-secondary">
                 {format(start, 'HH:mm', { locale: cs })} – {format(toPragueDate(new Date(start.getTime() + SESSION_DURATION_MINUTES * 60000)), 'HH:mm', { locale: cs })}
               </p>
-              {session.location && (
-                <p className="mt-0.5 truncate text-xs text-text-tertiary">{session.location}</p>
-              )}
             </Link>
           )
         })}

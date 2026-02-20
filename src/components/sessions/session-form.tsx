@@ -111,13 +111,6 @@ export function SessionForm({ clients }: SessionFormProps) {
         </div>
       )}
 
-      <Input
-        id="location"
-        name="location"
-        label="Místo"
-        placeholder="Např. Gym XY"
-      />
-
       <Textarea
         id="notes"
         name="notes"

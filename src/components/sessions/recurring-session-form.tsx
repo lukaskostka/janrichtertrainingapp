@@ -70,7 +70,6 @@ export function RecurringSessionForm({ clients, onSuccess, onDirtyChange }: Recu
         time: form.get('time') as string,
         intervalWeeks: parseInt(form.get('interval_weeks') as string),
         count: parseInt(form.get('count') as string),
-        location: (form.get('location') as string) || undefined,
         notes: (form.get('notes') as string) || undefined,
         startDate: form.get('start_date') as string,
       })
@@ -150,13 +149,6 @@ export function RecurringSessionForm({ clients, onSuccess, onDirtyChange }: Recu
         label="Počet opakování"
         options={COUNT_OPTIONS}
         required
-      />
-
-      <Input
-        id="location"
-        name="location"
-        label="Místo"
-        placeholder="Např. Gym XY"
       />
 
       <Textarea

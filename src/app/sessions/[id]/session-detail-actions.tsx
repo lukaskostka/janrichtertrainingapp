@@ -47,7 +47,12 @@ export function SessionDetailActions({ sessionId, clientId, status, scheduledAt,
     setNewDateTime(toLocalInputValue(scheduledAt))
   }, [scheduledAt])
 
-  if (status !== 'scheduled') return null
+  const isScheduled = status === 'scheduled'
+  const isCompleted = status === 'completed'
+
+  // For completed sessions, show only the exercise editor
+  // For cancelled/no_show, show nothing
+  if (!isScheduled && !isCompleted) return null
 
   async function handleComplete() {
     setLoading(true)
@@ -143,56 +148,55 @@ export function SessionDetailActions({ sessionId, clientId, status, scheduledAt,
           </div>
         )}
 
-        {/* Complete action */}
-        <Button className="w-full" size="lg" variant="secondary" onClick={() => setCompleteOpen(true)}>
-          <CheckCircle className="mr-2 h-4 w-4" strokeWidth={1.5} />
-          Označit dokončený
-        </Button>
+        {/* Actions only for scheduled sessions */}
+        {isScheduled && (
+          <>
+            {/* Complete action */}
+            <Button className="w-full" size="lg" variant="secondary" onClick={() => setCompleteOpen(true)}>
+              <CheckCircle className="mr-2 h-4 w-4" strokeWidth={1.5} />
+              Označit dokončený
+            </Button>
 
-        {/* Secondary actions */}
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => setRescheduleOpen(true)}
-          >
-            <CalendarClock className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
-            Přesunout
-          </Button>
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => setCancelOpen(true)}
-          >
-            <XCircle className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
-            Zrušit
-          </Button>
-        </div>
+            {/* Secondary actions */}
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setRescheduleOpen(true)}
+              >
+                <CalendarClock className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
+                Přesunout
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setCancelOpen(true)}
+              >
+                <XCircle className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
+                Zrušit
+              </Button>
+            </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => setNoShowOpen(true)}
-          >
-            <UserX className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
-            Nedostavil se
-          </Button>
-          <Button
-            variant="danger"
-            className="flex-1"
-            onClick={() => {
-              if (recurrenceGroupId) {
-                setDeleteOpen(true) // show option to delete single or all
-              } else {
-                setDeleteOpen(true)
-              }
-            }}
-          >
-            <Trash2 className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
-            Smazat
-          </Button>
-        </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setNoShowOpen(true)}
+              >
+                <UserX className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
+                Nedostavil se
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" strokeWidth={1.5} />
+                Smazat
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Complete dialog */}
