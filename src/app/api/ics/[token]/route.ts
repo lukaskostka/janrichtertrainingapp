@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import ical, { ICalAlarmType } from 'ical-generator'
+import ical, { ICalAlarmType, ICalAlarmRelatesTo } from 'ical-generator'
 import { createClient } from '@supabase/supabase-js'
 
 // Simple in-memory rate limiter
@@ -214,7 +214,7 @@ export async function GET(
     // Standard alarm: 15 min before every session
     event.createAlarm({
       type: ICalAlarmType.display,
-      trigger: -15 * 60,
+      trigger: 15 * 60,
       description: `Tr\u00e9nink \u2013 ${clientName}`,
     })
 
@@ -227,7 +227,7 @@ export async function GET(
         if (pkg.used_sessions === 0) {
           event.createAlarm({
             type: ICalAlarmType.display,
-            trigger: -5 * 60,
+            trigger: 5 * 60,
             description: `\ud83d\udccf \u010cas na InBody m\u011b\u0159en\u00ed \u2013 ${clientName}`,
           })
         }
@@ -238,11 +238,12 @@ export async function GET(
       const isLastByCount = pkg.used_sessions + 1 >= pkg.total_sessions
       const isFirstScheduledThatCompletes = isLastByCount && scheduledInPackage.length > 0 && scheduledInPackage[0].id === session.id
       if (isFirstScheduledThatCompletes) {
-        event.createAlarm({
+        const lastAlarm = event.createAlarm({
           type: ICalAlarmType.display,
-          trigger: Math.max(0, (session.duration_minutes - 5) * 60),
+          trigger: 5 * 60,
           description: `\u26a0\ufe0f Posledn\u00ed tr\u00e9nink z bal\u00ed\u010dku \u2013 p\u0159ipomenout platbu \u2013 ${clientName}`,
         })
+        lastAlarm.relatesTo(ICalAlarmRelatesTo.end)
       }
     }
   }
