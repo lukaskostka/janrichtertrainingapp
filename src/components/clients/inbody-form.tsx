@@ -462,7 +462,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
           name="weight"
           label="Váha (kg)"
           type="number"
-          step="0.1"
+          step="any"
           min={0}
           placeholder="75.5"
           value={formValues.weight}
@@ -476,7 +476,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
           name="body_fat_pct"
           label="Tělesný tuk (%)"
           type="number"
-          step="0.1"
+          step="any"
           min={0}
           max={100}
           placeholder="15.2"
@@ -491,7 +491,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
           name="muscle_mass"
           label="Svalová hmota (kg)"
           type="number"
-          step="0.1"
+          step="any"
           min={0}
           placeholder="35.0"
           value={formValues.muscle_mass}
@@ -505,7 +505,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
           name="bmi"
           label="BMI"
           type="number"
-          step="0.1"
+          step="any"
           min={0}
           placeholder="24.5"
           value={formValues.bmi}
@@ -519,7 +519,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
           name="visceral_fat"
           label="Viscerální tuk"
           type="number"
-          step="0.1"
+          step="any"
           min={0}
           placeholder="8"
           value={formValues.visceral_fat}
@@ -533,7 +533,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
           name="body_water_pct"
           label="Voda v těle (%)"
           type="number"
-          step="0.1"
+          step="any"
           min={0}
           max={100}
           placeholder="55.0"
@@ -564,7 +564,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_fat_kg"
                 label="Tuková hmota (kg)"
                 type="number"
-                step="0.1"
+                step="any"
                 min={0}
                 placeholder="12.5"
                 value={formValues.ext_fat_kg}
@@ -577,7 +577,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_ffm_kg"
                 label="Beztuková hmota (kg)"
                 type="number"
-                step="0.1"
+                step="any"
                 min={0}
                 placeholder="63.0"
                 value={formValues.ext_ffm_kg}
@@ -590,7 +590,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_tbw_liters"
                 label="Celková voda (l)"
                 type="number"
-                step="0.1"
+                step="any"
                 min={0}
                 placeholder="42.0"
                 value={formValues.ext_tbw_liters}
@@ -603,7 +603,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_whr"
                 label="WHR"
                 type="number"
-                step="0.01"
+                step="any"
                 min={0}
                 placeholder="0.85"
                 value={formValues.ext_whr}
@@ -671,7 +671,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_height_cm"
                 label="Výška (cm)"
                 type="number"
-                step="0.1"
+                step="any"
                 min={0}
                 placeholder="175"
                 value={formValues.ext_height_cm}
@@ -684,7 +684,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_muscle_adjustment_kg"
                 label="Doporučená změna svalů (kg)"
                 type="number"
-                step="0.1"
+                step="any"
                 placeholder="+2.5"
                 value={formValues.ext_muscle_adjustment_kg}
                 onChange={(e) => updateField('ext_muscle_adjustment_kg', e.target.value)}
@@ -696,7 +696,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                 name="ext_fat_adjustment_kg"
                 label="Doporučená změna tuku (kg)"
                 type="number"
-                step="0.1"
+                step="any"
                 placeholder="-3.0"
                 value={formValues.ext_fat_adjustment_kg}
                 onChange={(e) => updateField('ext_fat_adjustment_kg', e.target.value)}
@@ -739,7 +739,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                         name={massField}
                         label="kg"
                         type="number"
-                        step="0.1"
+                        step="any"
                         min={0}
                         value={formValues[massField]}
                         onChange={(e) => updateField(massField, e.target.value)}
@@ -781,7 +781,7 @@ export function InBodyForm({ clientId, record, onSubmit }: InBodyFormProps) {
                         name={massField}
                         label="kg"
                         type="number"
-                        step="0.1"
+                        step="any"
                         min={0}
                         value={formValues[massField]}
                         onChange={(e) => updateField(massField, e.target.value)}
