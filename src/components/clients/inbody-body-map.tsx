@@ -28,66 +28,160 @@ const EVAL_LABELS: Record<SegmentalEvaluation, string> = {
 }
 
 function getSegmentColor(evaluation: SegmentalEvaluation | null, mode: Mode): string {
-  if (!evaluation) return '#6B7280' // gray fallback
-
+  if (!evaluation) return '#4B5563'
   if (mode === 'lean') {
     switch (evaluation) {
-      case 'above': return '#22C55E'  // green - good muscle
-      case 'normal': return '#3B82F6' // blue - normal
-      case 'below': return '#EF4444'  // red - low muscle
+      case 'above': return '#22C55E'
+      case 'normal': return '#3B82F6'
+      case 'below': return '#EF4444'
     }
   } else {
-    // fat mode: above = too much fat (red), below = low fat (green)
     switch (evaluation) {
-      case 'above': return '#F59E0B'  // orange - too much fat
-      case 'normal': return '#3B82F6' // blue - normal
-      case 'below': return '#22C55E'  // green - low fat
+      case 'above': return '#F59E0B'
+      case 'normal': return '#3B82F6'
+      case 'below': return '#22C55E'
     }
   }
 }
 
-// Center coordinates for placing text labels on each segment
-const SEGMENT_TEXT_POS: Record<BodySegment, { x: number; y: number }> = {
-  left_arm: { x: 38, y: 195 },
-  right_arm: { x: 162, y: 195 },
-  trunk: { x: 100, y: 195 },
-  left_leg: { x: 78, y: 320 },
-  right_leg: { x: 122, y: 320 },
+function getSegmentFillOpacity(evaluation: SegmentalEvaluation | null, isSelected: boolean): number {
+  if (isSelected) return 0.55
+  if (!evaluation) return 0.2
+  return 0.35
 }
 
-// Tooltip positions (offset from body)
-const TOOLTIP_POS: Record<BodySegment, { x: number; y: number }> = {
-  left_arm: { x: -10, y: 160 },
-  right_arm: { x: 140, y: 160 },
-  trunk: { x: 50, y: 120 },
-  left_leg: { x: -10, y: 290 },
-  right_leg: { x: 140, y: 290 },
+// Label positions for each segment (centered on segment area)
+const SEGMENT_LABEL_POS: Record<BodySegment, { x: number; y: number }> = {
+  left_arm: { x: 28, y: 185 },
+  right_arm: { x: 172, y: 185 },
+  trunk: { x: 100, y: 190 },
+  left_leg: { x: 75, y: 320 },
+  right_leg: { x: 125, y: 320 },
 }
 
 const SEGMENTS: BodySegment[] = ['left_arm', 'right_arm', 'trunk', 'left_leg', 'right_leg']
 
-// SVG paths for a clean front-view human silhouette
+// Clean, proportional front-view silhouette paths
+// ViewBox: 0 0 200 420
 const BODY_PATHS: Record<BodySegment, string> = {
-  // Left arm (viewer's left = anatomical right arm)
-  left_arm:
-    'M58,135 C50,137 42,142 38,150 L30,175 C28,182 26,190 25,198 C24,206 24,214 26,220 L30,228 C32,232 35,234 38,233 L42,230 C44,228 46,224 47,218 L50,200 C51,195 53,190 55,186 L60,170 L62,155 Z',
-  // Right arm (viewer's right = anatomical left arm)
-  right_arm:
-    'M142,135 C150,137 158,142 162,150 L170,175 C172,182 174,190 175,198 C176,206 176,214 174,220 L170,228 C168,232 165,234 162,233 L158,230 C156,228 154,224 153,218 L150,200 C149,195 147,190 145,186 L140,170 L138,155 Z',
+  // Left arm (viewer's left)
+  left_arm: [
+    'M 62 142',
+    'C 58 144, 52 148, 48 155',
+    'L 40 172',
+    'C 36 180, 32 190, 30 200',
+    'C 28 210, 27 220, 28 228',
+    'C 29 234, 32 238, 36 238',
+    'C 40 238, 42 234, 43 228',
+    'L 46 210',
+    'C 48 200, 50 192, 53 185',
+    'L 58 168',
+    'L 63 152',
+    'Z',
+  ].join(' '),
+
+  // Right arm (viewer's right)
+  right_arm: [
+    'M 138 142',
+    'C 142 144, 148 148, 152 155',
+    'L 160 172',
+    'C 164 180, 168 190, 170 200',
+    'C 172 210, 173 220, 172 228',
+    'C 171 234, 168 238, 164 238',
+    'C 160 238, 158 234, 157 228',
+    'L 154 210',
+    'C 152 200, 150 192, 147 185',
+    'L 142 168',
+    'L 137 152',
+    'Z',
+  ].join(' '),
+
   // Trunk / torso
-  trunk:
-    'M62,135 L60,170 L55,186 C58,200 60,215 62,230 L64,250 C66,258 68,262 72,264 L80,266 L100,268 L120,266 L128,264 C132,262 134,258 136,250 L138,230 C140,215 142,200 145,186 L140,170 L138,135 L130,130 C120,127 110,126 100,126 C90,126 80,127 70,130 Z',
+  trunk: [
+    'M 63 142',
+    'L 63 152',
+    'L 58 168',
+    'C 58 180, 58 195, 60 210',
+    'C 62 225, 63 240, 65 255',
+    'L 66 262',
+    'C 70 268, 78 272, 88 273',
+    'L 100 274',
+    'L 112 273',
+    'C 122 272, 130 268, 134 262',
+    'L 135 255',
+    'C 137 240, 138 225, 140 210',
+    'C 142 195, 142 180, 142 168',
+    'L 137 152',
+    'L 138 142',
+    'C 128 136, 116 132, 100 131',
+    'C 84 132, 72 136, 63 142',
+    'Z',
+  ].join(' '),
+
   // Left leg
-  left_leg:
-    'M64,250 L62,230 C60,240 60,250 62,260 L64,280 C66,295 68,310 69,325 L70,340 C70,350 71,360 72,370 L72,380 C72,385 74,388 78,388 L84,388 C87,388 88,386 88,382 L88,370 C87,360 87,350 86,340 L84,320 C83,305 82,290 80,275 L80,266 L100,268 L100,270 C98,280 96,295 94,310 L92,330 C90,345 89,360 88,370 Z',
+  left_leg: [
+    'M 66 262',
+    'C 63 268, 62 275, 62 282',
+    'L 62 300',
+    'C 62 315, 64 330, 66 345',
+    'L 68 360',
+    'C 69 370, 70 378, 70 385',
+    'L 70 395',
+    'C 70 400, 72 403, 76 403',
+    'L 86 403',
+    'C 89 403, 90 401, 90 397',
+    'L 89 388',
+    'C 88 378, 87 368, 86 358',
+    'L 84 340',
+    'C 82 325, 80 310, 80 295',
+    'L 80 280',
+    'L 88 273',
+    'L 100 274',
+    'L 100 278',
+    'C 97 285, 95 300, 93 315',
+    'L 91 340',
+    'C 90 355, 89 370, 89 385',
+    'L 89 388',
+    'Z',
+  ].join(' '),
+
   // Right leg
-  right_leg:
-    'M136,250 L138,230 C140,240 140,250 138,260 L136,280 C134,295 132,310 131,325 L130,340 C130,350 129,360 128,370 L128,380 C128,385 126,388 122,388 L116,388 C113,388 112,386 112,382 L112,370 C113,360 113,350 114,340 L116,320 C117,305 118,290 120,275 L120,266 L100,268 L100,270 C102,280 104,295 106,310 L108,330 C110,345 111,360 112,370 Z',
+  right_leg: [
+    'M 134 262',
+    'C 137 268, 138 275, 138 282',
+    'L 138 300',
+    'C 138 315, 136 330, 134 345',
+    'L 132 360',
+    'C 131 370, 130 378, 130 385',
+    'L 130 395',
+    'C 130 400, 128 403, 124 403',
+    'L 114 403',
+    'C 111 403, 110 401, 110 397',
+    'L 111 388',
+    'C 112 378, 113 368, 114 358',
+    'L 116 340',
+    'C 118 325, 120 310, 120 295',
+    'L 120 280',
+    'L 112 273',
+    'L 100 274',
+    'L 100 278',
+    'C 103 285, 105 300, 107 315',
+    'L 109 340',
+    'C 110 355, 111 370, 111 385',
+    'L 111 388',
+    'Z',
+  ].join(' '),
 }
 
-// Head path (decorative, not clickable)
-const HEAD_PATH =
-  'M100,126 C90,126 80,127 70,130 L68,126 C66,118 66,108 68,100 C70,88 78,78 88,74 C92,72 96,71 100,71 C104,71 108,72 112,74 C122,78 130,88 132,100 C134,108 134,118 132,126 L130,130 C120,127 110,126 100,126 Z'
+const HEAD_OVAL = {
+  cx: 100,
+  cy: 96,
+  rx: 18,
+  ry: 22,
+}
+
+// Neck
+const NECK_PATH = 'M 92 116 L 92 131 C 94 132, 97 132, 100 132 C 103 132, 106 132, 108 131 L 108 116'
 
 export function InBodyBodyMap({ record, compareRecord, initialMode = 'lean' }: InBodyBodyMapProps) {
   const [mode, setMode] = useState<Mode>(initialMode)
@@ -121,7 +215,7 @@ export function InBodyBodyMap({ record, compareRecord, initialMode = 'lean' }: I
                 : 'bg-card text-text-secondary hover:bg-elevated'
             }`}
           >
-            Svalova hmota
+            Svalová hmota
           </button>
           <button
             onClick={() => { setMode('fat'); setSelectedSegment(null) }}
@@ -136,25 +230,49 @@ export function InBodyBodyMap({ record, compareRecord, initialMode = 'lean' }: I
         </div>
       </CardHeader>
       <CardContent className="pb-4">
-        <div className="relative flex justify-center">
+        <div className="relative flex justify-center" onClick={handleBackgroundClick}>
           <svg
-            viewBox="0 0 200 400"
-            className="h-[320px] w-auto"
-            onClick={handleBackgroundClick}
+            viewBox="0 0 200 420"
+            className="h-[300px] w-auto"
           >
-            {/* Head (decorative) */}
+            <defs>
+              {/* Subtle inner glow for segments */}
+              <filter id="segGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur" />
+                <feFlood floodColor="white" floodOpacity="0.08" />
+                <feComposite in2="blur" operator="in" />
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Head oval */}
+            <ellipse
+              cx={HEAD_OVAL.cx}
+              cy={HEAD_OVAL.cy}
+              rx={HEAD_OVAL.rx}
+              ry={HEAD_OVAL.ry}
+              fill="#2A2A2A"
+              stroke="#404040"
+              strokeWidth={1}
+            />
+
+            {/* Neck */}
             <path
-              d={HEAD_PATH}
-              fill="#374151"
-              fillOpacity={0.4}
-              stroke="#6B7280"
-              strokeWidth={0.8}
+              d={NECK_PATH}
+              fill="#2A2A2A"
+              stroke="#404040"
+              strokeWidth={1}
             />
 
             {/* Body segments */}
             {SEGMENTS.map((segment) => {
               const entry = segmentalData[segment]
               const color = getSegmentColor(entry?.evaluation ?? null, mode)
+              const isSelected = selectedSegment === segment
+              const fillOpacity = getSegmentFillOpacity(entry?.evaluation ?? null, isSelected)
 
               return (
                 <g
@@ -168,29 +286,44 @@ export function InBodyBodyMap({ record, compareRecord, initialMode = 'lean' }: I
                   <path
                     d={BODY_PATHS[segment]}
                     fill={color}
-                    fillOpacity={selectedSegment === segment ? 0.6 : 0.35}
-                    stroke={selectedSegment === segment ? '#FFFFFF' : '#6B7280'}
-                    strokeWidth={selectedSegment === segment ? 1.5 : 0.8}
+                    fillOpacity={fillOpacity}
+                    stroke={isSelected ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)'}
+                    strokeWidth={isSelected ? 1.5 : 0.5}
+                    strokeLinejoin="round"
+                    filter={isSelected ? 'url(#segGlow)' : undefined}
                     className="transition-all duration-200"
                   />
-                  {/* Mass value text */}
+                  {/* Mass value */}
                   {entry?.mass_kg != null && (
-                    <text
-                      x={SEGMENT_TEXT_POS[segment].x}
-                      y={SEGMENT_TEXT_POS[segment].y}
-                      textAnchor="middle"
-                      fill="#FFFFFF"
-                      fontSize={9}
-                      fontWeight={500}
-                    >
-                      {entry.mass_kg.toFixed(1)}
-                    </text>
+                    <>
+                      <text
+                        x={SEGMENT_LABEL_POS[segment].x}
+                        y={SEGMENT_LABEL_POS[segment].y}
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize={11}
+                        fontWeight={600}
+                        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                      >
+                        {entry.mass_kg.toFixed(1)}
+                      </text>
+                      <text
+                        x={SEGMENT_LABEL_POS[segment].x}
+                        y={SEGMENT_LABEL_POS[segment].y + 11}
+                        textAnchor="middle"
+                        fill="rgba(255,255,255,0.5)"
+                        fontSize={7}
+                        fontWeight={400}
+                      >
+                        kg
+                      </text>
+                    </>
                   )}
-                  {/* Delta indicator */}
+                  {/* Delta */}
                   {compareSegmental && entry?.mass_kg != null && compareSegmental[segment]?.mass_kg != null && (
                     <DeltaText
-                      x={SEGMENT_TEXT_POS[segment].x}
-                      y={SEGMENT_TEXT_POS[segment].y + 12}
+                      x={SEGMENT_LABEL_POS[segment].x}
+                      y={SEGMENT_LABEL_POS[segment].y + 22}
                       current={entry.mass_kg}
                       previous={compareSegmental[segment].mass_kg!}
                       mode={mode}
@@ -201,74 +334,83 @@ export function InBodyBodyMap({ record, compareRecord, initialMode = 'lean' }: I
             })}
           </svg>
 
-          {/* Tooltip overlay */}
+          {/* Tooltip */}
           <AnimatePresence>
             {selectedSegment && segmentalData[selectedSegment] && (
               <motion.div
                 key={selectedSegment}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
                 transition={{ duration: 0.15 }}
-                className="absolute z-10 rounded-xl border border-border bg-elevated px-3 py-2 shadow-lg"
-                style={{
-                  left: `calc(50% + ${TOOLTIP_POS[selectedSegment].x - 100}px)`,
-                  top: `${TOOLTIP_POS[selectedSegment].y}px`,
-                }}
+                className="absolute bottom-2 left-4 right-4 z-10 rounded-xl border border-border bg-elevated/95 px-4 py-3 shadow-lg backdrop-blur-sm"
               >
-                <p className="text-xs font-medium text-text-primary">
-                  {SEGMENT_LABELS[selectedSegment]}
-                </p>
-                <p className="mt-0.5 text-xs text-text-secondary">
-                  {segmentalData[selectedSegment].mass_kg != null
-                    ? `${segmentalData[selectedSegment].mass_kg!.toFixed(1)} kg`
-                    : '---'}
-                </p>
-                {segmentalData[selectedSegment].evaluation && (
-                  <p className="mt-0.5 text-xs text-text-tertiary">
-                    {EVAL_LABELS[segmentalData[selectedSegment].evaluation!]}
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-text-primary">
+                    {SEGMENT_LABELS[selectedSegment]}
                   </p>
-                )}
-                {compareSegmental &&
-                  segmentalData[selectedSegment].mass_kg != null &&
-                  compareSegmental[selectedSegment]?.mass_kg != null && (
-                    <TooltipDelta
-                      current={segmentalData[selectedSegment].mass_kg!}
-                      previous={compareSegmental[selectedSegment].mass_kg!}
-                      mode={mode}
-                    />
+                  {segmentalData[selectedSegment].evaluation && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                      style={{
+                        color: getSegmentColor(segmentalData[selectedSegment].evaluation!, mode),
+                        backgroundColor: `${getSegmentColor(segmentalData[selectedSegment].evaluation!, mode)}20`,
+                      }}
+                    >
+                      {EVAL_LABELS[segmentalData[selectedSegment].evaluation!]}
+                    </span>
                   )}
+                </div>
+                <div className="mt-1 flex items-center gap-3">
+                  <span className="text-lg font-semibold text-text-primary">
+                    {segmentalData[selectedSegment].mass_kg != null
+                      ? `${segmentalData[selectedSegment].mass_kg!.toFixed(1)} kg`
+                      : '—'}
+                  </span>
+                  {compareSegmental &&
+                    segmentalData[selectedSegment].mass_kg != null &&
+                    compareSegmental[selectedSegment]?.mass_kg != null && (
+                      <TooltipDelta
+                        current={segmentalData[selectedSegment].mass_kg!}
+                        previous={compareSegmental[selectedSegment].mass_kg!}
+                        mode={mode}
+                      />
+                    )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {/* Legend */}
-        <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-text-tertiary">
-          <div className="flex items-center gap-1">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: mode === 'lean' ? '#22C55E' : '#F59E0B', opacity: 0.5 }}
-            />
-            {mode === 'lean' ? 'Nad normou' : 'Nad normou'}
-          </div>
-          <div className="flex items-center gap-1">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: '#3B82F6', opacity: 0.5 }}
-            />
-            Normalni
-          </div>
-          <div className="flex items-center gap-1">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: mode === 'lean' ? '#EF4444' : '#22C55E', opacity: 0.5 }}
-            />
-            {mode === 'lean' ? 'Pod normou' : 'Pod normou'}
-          </div>
+        <div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-text-tertiary">
+          <LegendItem
+            color={mode === 'lean' ? '#22C55E' : '#F59E0B'}
+            label="Nad normou"
+          />
+          <LegendItem
+            color="#3B82F6"
+            label="Normální"
+          />
+          <LegendItem
+            color={mode === 'lean' ? '#EF4444' : '#22C55E'}
+            label="Pod normou"
+          />
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function LegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className="inline-block h-2 w-2 rounded-full"
+        style={{ backgroundColor: color, opacity: 0.7 }}
+      />
+      {label}
+    </div>
   )
 }
 
@@ -288,12 +430,9 @@ function DeltaText({
   const delta = current - previous
   if (Math.abs(delta) < 0.05) return null
 
-  // For lean: increase is good (green), decrease is bad (red)
-  // For fat: decrease is good (green), increase is bad (red)
   const isPositiveChange = mode === 'lean' ? delta > 0 : delta < 0
   const color = isPositiveChange ? '#22C55E' : '#EF4444'
-  const arrow = delta > 0 ? '\u25B2' : '\u25BC'
-  const text = `${arrow} ${delta > 0 ? '+' : ''}${delta.toFixed(1)}`
+  const sign = delta > 0 ? '+' : ''
 
   return (
     <text
@@ -302,9 +441,9 @@ function DeltaText({
       textAnchor="middle"
       fill={color}
       fontSize={7}
-      fontWeight={500}
+      fontWeight={600}
     >
-      {text}
+      {sign}{delta.toFixed(1)}
     </text>
   )
 }
@@ -322,12 +461,12 @@ function TooltipDelta({
   if (Math.abs(delta) < 0.05) return null
 
   const isPositiveChange = mode === 'lean' ? delta > 0 : delta < 0
-  const color = isPositiveChange ? '#22C55E' : '#EF4444'
-  const arrow = delta > 0 ? '\u25B2' : '\u25BC'
+  const colorClass = isPositiveChange ? 'text-success' : 'text-danger'
+  const sign = delta > 0 ? '+' : ''
 
   return (
-    <p className="mt-0.5 text-xs font-medium" style={{ color }}>
-      {arrow} {delta > 0 ? '+' : ''}{delta.toFixed(1)} kg
-    </p>
+    <span className={`text-sm font-medium ${colorClass}`}>
+      {sign}{delta.toFixed(1)} kg
+    </span>
   )
 }
