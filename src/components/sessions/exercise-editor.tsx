@@ -12,6 +12,7 @@ import { getSupersetLabels, groupExercisesForRender } from '@/lib/utils'
 import {
   addSessionExercise,
   getLastExerciseSets,
+  loadTemplateExercises,
   updateSessionExerciseSets,
   updateSessionExerciseSuperset,
 } from '@/lib/actions/session-exercises'
@@ -79,45 +80,22 @@ export function ExerciseEditor({ sessionId, clientId, initialExercises }: Exerci
 
     const startIndex = exercises.length
 
-    for (let i = 0; i < templateExercises.length; i++) {
-      const te = templateExercises[i]
-      try {
-        const record = await addSessionExercise(sessionId, te.exercise_id, startIndex + i)
+    try {
+      const results = await loadTemplateExercises(sessionId, clientId, templateExercises, startIndex)
 
-        let sets: ExerciseSet[] = te.sets_config || []
-        if (clientId) {
-          try {
-            const lastSets = await getLastExerciseSets(clientId, te.exercise_id) as ExerciseSet[]
-            if (lastSets && lastSets.length > 0) {
-              sets = lastSets
-            }
-          } catch (err) {
-            console.error('Failed to get last exercise sets:', err)
-          }
-        }
+      const newRecords: ExerciseRecord[] = results.map((r) => ({
+        id: r.id,
+        exercise_id: r.exercise_id,
+        order_index: r.order_index,
+        sets: r.sets,
+        notes: r.notes,
+        superset_group: r.superset_group,
+        exercises: r.exercises,
+      }))
 
-        if (sets.length > 0) {
-          await updateSessionExerciseSets(record.id, sets)
-        }
-
-        if (te.superset_group !== null && te.superset_group !== undefined) {
-          await updateSessionExerciseSuperset(record.id, te.superset_group)
-        }
-
-        const newExercise: ExerciseRecord = {
-          id: record.id,
-          exercise_id: record.exercise_id,
-          order_index: record.order_index,
-          sets,
-          notes: record.notes,
-          superset_group: te.superset_group ?? null,
-          exercises: { id: te.exercise_id, name: te.exercise_name || record.exercises?.name || 'Cvik' },
-        }
-
-        setExercises((prev) => [...prev, newExercise])
-      } catch (err) {
-        console.error('Failed to load template exercise:', err)
-      }
+      setExercises((prev) => [...prev, ...newRecords])
+    } catch (err) {
+      console.error('Failed to load template exercises:', err)
     }
   }, [exercises.length, sessionId, clientId])
 

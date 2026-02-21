@@ -3,7 +3,7 @@
 import { createAuthenticatedClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import type { Client, Package } from '@/types'
+import type { Client, Package, InBodyRecord } from '@/types'
 
 type ClientWithPackages = Client & {
   packages: Pick<Package, 'id' | 'name' | 'total_sessions' | 'used_sessions' | 'status'>[]
@@ -42,6 +42,28 @@ export async function getClient(id: string): Promise<Client> {
     .single()
   if (error) throw error
   return data as Client
+}
+
+export async function getClientDetail(id: string): Promise<{
+  client: Client
+  packages: Package[]
+  inbodyRecords: InBodyRecord[]
+} | null> {
+  const { supabase } = await createAuthenticatedClient()
+
+  const [clientRes, packagesRes, inbodyRes] = await Promise.all([
+    supabase.from('clients').select('*').eq('id', id).single(),
+    supabase.from('packages').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+    supabase.from('inbody_records').select('*').eq('client_id', id).order('measured_at', { ascending: false }),
+  ])
+
+  if (clientRes.error) return null
+
+  return {
+    client: clientRes.data as Client,
+    packages: (packagesRes.data as Package[]) ?? [],
+    inbodyRecords: (inbodyRes.data as InBodyRecord[]) ?? [],
+  }
 }
 
 export async function createClientAction(formData: FormData) {

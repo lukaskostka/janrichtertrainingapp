@@ -91,7 +91,7 @@ export async function getLastExerciseSets(clientId: string, exerciseId: string) 
     .order('sessions(scheduled_at)', { ascending: false })
     .limit(1)
   if (error) {
-    // Fallback: iterate through recent sessions to find the exercise
+    // Fallback: batch query recent sessions instead of N+1 loop
     const { data: sessions } = await supabase
       .from('sessions')
       .select('id')
@@ -101,20 +101,86 @@ export async function getLastExerciseSets(clientId: string, exerciseId: string) 
       .limit(10)
 
     if (sessions && sessions.length > 0) {
-      for (const s of sessions) {
-        const { data: exercises } = await supabase
-          .from('session_exercises')
-          .select('sets')
-          .eq('exercise_id', exerciseId)
-          .eq('session_id', s.id)
-          .limit(1)
+      const sessionIds = sessions.map(s => s.id)
+      const { data: exercises } = await supabase
+        .from('session_exercises')
+        .select('sets, session_id')
+        .eq('exercise_id', exerciseId)
+        .in('session_id', sessionIds)
 
-        if (exercises && exercises.length > 0 && exercises[0].sets) {
-          return exercises[0].sets
+      if (exercises && exercises.length > 0) {
+        // Find the first match in chronological order (most recent first)
+        for (const sid of sessionIds) {
+          const match = exercises.find(e => e.session_id === sid)
+          if (match?.sets) {
+            return match.sets
+          }
         }
       }
     }
     return []
   }
   return data?.[0]?.sets || []
+}
+
+export async function loadTemplateExercises(
+  sessionId: string,
+  clientId: string,
+  templateExercises: { exercise_id: string; exercise_name?: string; sets_config?: { reps: number; weight: number }[]; superset_group?: number | null }[],
+  startIndex: number
+) {
+  // 1. Insert all exercises in parallel (separate calls due to RLS)
+  const inserted = await Promise.all(
+    templateExercises.map((te, i) =>
+      addSessionExercise(sessionId, te.exercise_id, startIndex + i)
+    )
+  )
+
+  // 2. Fetch all prefills in parallel
+  const prefills = await Promise.all(
+    templateExercises.map(te => getLastExerciseSets(clientId, te.exercise_id))
+  )
+
+  // 3. Determine final sets and update in parallel
+  const { supabase } = await createAuthenticatedClient()
+  await Promise.all(
+    inserted.map(async (record, i) => {
+      const te = templateExercises[i]
+      const prefill = prefills[i] as ExerciseSet[] | undefined
+      const finalSets: ExerciseSet[] = (Array.isArray(prefill) && prefill.length > 0)
+        ? prefill
+        : (te.sets_config || [])
+
+      const updates: Record<string, unknown> = {}
+      if (finalSets.length > 0) updates.sets = finalSets
+      if (te.superset_group != null) updates.superset_group = te.superset_group
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase
+          .from('session_exercises')
+          .update(updates)
+          .eq('id', record.id)
+        if (error) throw error
+      }
+    })
+  )
+
+  // 4. Return the final state of all exercises
+  return inserted.map((record, i) => {
+    const te = templateExercises[i]
+    const prefill = prefills[i] as ExerciseSet[] | undefined
+    const finalSets: ExerciseSet[] = (Array.isArray(prefill) && prefill.length > 0)
+      ? prefill
+      : (te.sets_config || [])
+
+    return {
+      id: record.id,
+      exercise_id: record.exercise_id,
+      order_index: record.order_index,
+      sets: finalSets,
+      notes: record.notes,
+      superset_group: te.superset_group ?? null,
+      exercises: record.exercises,
+    }
+  })
 }

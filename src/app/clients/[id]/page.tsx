@@ -20,9 +20,9 @@ import { InBodyBodyMap } from '@/components/clients/inbody-body-map'
 import { InBodyDelta } from '@/components/clients/inbody-delta'
 import { InBodyPhotos } from '@/components/clients/inbody-photos'
 import { deleteInBodyRecord } from '@/lib/actions/inbody'
+import { getClientDetail } from '@/lib/actions/clients'
 import { CLIENT_STATUS_LABELS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
 import type { Client, Package as PackageType, InBodyRecord, InBodyExtendedData } from '@/types'
 
 const TABS = [
@@ -51,21 +51,16 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     let cancelled = false
-    const supabase = createClient()
 
-    Promise.all([
-      supabase.from('clients').select('*').eq('id', clientId).single(),
-      supabase.from('packages').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
-      supabase.from('inbody_records').select('*').eq('client_id', clientId).order('measured_at', { ascending: false }),
-    ]).then(([clientRes, packagesRes, inbodyRes]) => {
+    getClientDetail(clientId).then((result) => {
       if (cancelled) return
-      if (clientRes.error) {
+      if (!result) {
         router.push('/clients')
         return
       }
-      setClient(clientRes.data)
-      setPackages(packagesRes.data ?? [])
-      setInbodyRecords(inbodyRes.data ?? [])
+      setClient(result.client)
+      setPackages(result.packages)
+      setInbodyRecords(result.inbodyRecords)
       setLoading(false)
     })
 

@@ -13,7 +13,7 @@ import { Loading } from '@/components/ui/loading'
 import { Button } from '@/components/ui/button'
 import { StaggerList, StaggerItem } from '@/components/ui/motion'
 import { ClientCard } from '@/components/clients/client-card'
-import { createClient } from '@/lib/supabase/client'
+import { getClients } from '@/lib/actions/clients'
 import type { Client, Package } from '@/types'
 
 type ClientWithPackages = Client & {
@@ -49,23 +49,10 @@ function ClientsPage() {
   const loadClients = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const supabase = createClient()
-    let query = supabase
-      .from('clients')
-      .select('*, packages(id, name, total_sessions, used_sessions, status)')
-      .order('name')
-
-    if (search) {
-      query = query.ilike('name', `%${search}%`)
-    }
-    if (status && status !== 'all') {
-      query = query.eq('status', status as 'active' | 'inactive' | 'archived')
-    }
 
     try {
-      const { data, error: queryError } = await query
-      if (queryError) throw queryError
-      setClients((data as ClientWithPackages[]) ?? [])
+      const data = await getClients(search || undefined, status || undefined)
+      setClients(data as ClientWithPackages[])
     } catch {
       setClients([])
       setError('Nepodařilo se načíst klienty.')

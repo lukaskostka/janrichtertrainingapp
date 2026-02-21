@@ -23,47 +23,63 @@ export async function getDashboardData() {
   const monthStart = startOfMonthUtc(now)
   const monthEnd = endOfMonthUtc(now)
 
-  // Today's sessions
-  const { data: todaySessions } = await supabase
-    .from('sessions')
-    .select('*, clients(id, name)')
-    .gte('scheduled_at', todayStart)
-    .lte('scheduled_at', todayEnd)
-    .order('scheduled_at')
-
-  // This week's session count
-  const { count: weekSessions } = await supabase
-    .from('sessions')
-    .select('*', { count: 'exact', head: true })
-    .gte('scheduled_at', weekStart)
-    .lte('scheduled_at', weekEnd)
-    .in('status', ['scheduled', 'completed'])
-
-  // Active clients count
-  const { count: activeClients } = await supabase
-    .from('clients')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'active')
-
-  // This month's income (from paid packages created this month)
-  const { data: monthPackages } = await supabase
-    .from('packages')
-    .select('price')
-    .eq('paid', true)
-    .gte('paid_at', monthStart)
-    .lte('paid_at', monthEnd)
+  // Run all 6 independent queries in parallel
+  const [
+    { data: todaySessions },
+    { count: weekSessions },
+    { count: activeClients },
+    { data: monthPackages },
+    { data: weekAllSessions },
+    { data: weekScheduledSessions },
+  ] = await Promise.all([
+    // Today's sessions
+    supabase
+      .from('sessions')
+      .select('*, clients(id, name)')
+      .gte('scheduled_at', todayStart)
+      .lte('scheduled_at', todayEnd)
+      .order('scheduled_at'),
+    // This week's session count
+    supabase
+      .from('sessions')
+      .select('*', { count: 'exact', head: true })
+      .gte('scheduled_at', weekStart)
+      .lte('scheduled_at', weekEnd)
+      .in('status', ['scheduled', 'completed']),
+    // Active clients count
+    supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active'),
+    // This month's income (from paid packages created this month)
+    supabase
+      .from('packages')
+      .select('price')
+      .eq('paid', true)
+      .gte('paid_at', monthStart)
+      .lte('paid_at', monthEnd),
+    // Week sessions by day (for weekly overview)
+    supabase
+      .from('sessions')
+      .select('scheduled_at')
+      .gte('scheduled_at', weekStart)
+      .lte('scheduled_at', weekEnd)
+      .in('status', ['scheduled', 'completed']),
+    // This week's scheduled sessions with package + client info (for alerts)
+    supabase
+      .from('sessions')
+      .select('*, clients(id, name), packages(id, name, total_sessions, used_sessions)')
+      .gte('scheduled_at', weekStart)
+      .lte('scheduled_at', weekEnd)
+      .eq('status', 'scheduled')
+      .not('package_id', 'is', null)
+      .order('scheduled_at'),
+  ])
 
   const monthIncome = monthPackages?.reduce((sum, p) => sum + (Number(p.price) || 0), 0) || 0
 
-  // Week sessions by day (for weekly overview)
+  // Week sessions by day (post-processing)
   const weekStartDate = startOfWeek(toPragueDate(now), { weekStartsOn: 1 })
-  const { data: weekAllSessions } = await supabase
-    .from('sessions')
-    .select('scheduled_at')
-    .gte('scheduled_at', weekStart)
-    .lte('scheduled_at', weekEnd)
-    .in('status', ['scheduled', 'completed'])
-
   const weekSessionsByDay = Array.from({ length: 7 }).map((_, i) => {
     const day = addDays(weekStartDate, i)
     const dayStart = startOfDay(day)
@@ -77,16 +93,6 @@ export async function getDashboardData() {
 
   // --- Alerts ---
   const alerts: DashboardAlert[] = []
-
-  // Get this week's scheduled sessions with package + client info
-  const { data: weekScheduledSessions } = await supabase
-    .from('sessions')
-    .select('*, clients(id, name), packages(id, name, total_sessions, used_sessions)')
-    .gte('scheduled_at', weekStart)
-    .lte('scheduled_at', weekEnd)
-    .eq('status', 'scheduled')
-    .not('package_id', 'is', null)
-    .order('scheduled_at')
 
   if (weekScheduledSessions) {
     // Track which clients we've already alerted for each type
