@@ -9,7 +9,6 @@ import type { SessionWithClient, SessionWithDetails } from '@/types'
 const createSessionSchema = z.object({
   client_id: z.string().uuid(),
   scheduled_at: z.string().min(1),
-  location: z.preprocess((v) => (v === '' ? null : v), z.string().nullable()),
   notes: z.preprocess((v) => (v === '' ? null : v), z.string().nullable()),
 })
 
@@ -46,7 +45,6 @@ export async function createSessionAction(formData: FormData) {
   const validated = createSessionSchema.parse({
     client_id: formData.get('client_id'),
     scheduled_at: formData.get('scheduled_at'),
-    location: formData.get('location'),
     notes: formData.get('notes'),
   })
 
@@ -65,7 +63,6 @@ export async function createSessionAction(formData: FormData) {
     client_id: validated.client_id,
     package_id: activePackage?.id || null,
     scheduled_at: scheduledAt,
-    location: validated.location,
     notes: validated.notes,
   })
   if (error) throw error

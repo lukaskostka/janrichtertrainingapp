@@ -27,7 +27,3 @@ export function validateServerEnv() {
   return result.data
 }
 
-// Validate at import time on the server
-if (typeof window === 'undefined') {
-  validateEnv()
-}

@@ -12,7 +12,6 @@ const recurringSessionSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/, 'Čas musí být ve formátu HH:mm'),
   intervalWeeks: z.number().int().min(1).max(52),
   count: z.number().int().min(1).max(104),
-  location: z.string().optional(),
   notes: z.string().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum musí být ve formátu YYYY-MM-DD'),
 })
@@ -61,7 +60,6 @@ export async function createRecurringSessions(params: RecurringSessionParams) {
       client_id: validated.clientId,
       package_id: (activePackage && remainingInPackage > 0) ? activePackage.id : null,
       scheduled_at: scheduledAt,
-      location: validated.location || null,
       notes: validated.notes || null,
       recurrence_group_id: recurrenceGroupId,
       recurrence_rule: recurrenceRule,
