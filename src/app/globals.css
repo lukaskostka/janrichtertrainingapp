@@ -75,6 +75,15 @@ input, select, textarea {
   box-sizing: border-box !important;
 }
 
+/* iOS date/time inputs: reset native appearance so width is respected */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100% !important;
+}
+
 /* Dark scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
