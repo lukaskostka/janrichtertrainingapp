@@ -2,6 +2,7 @@
 
 import { createAuthenticatedClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import type { InBodyExtendedData, BodySegment, SegmentalEvaluation } from '@/types'
 
 const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
 const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])
@@ -14,6 +15,68 @@ function validatePhoto(photo: File) {
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     throw new Error(`Nepodporovaný formát fotky "${photo.name}". Povolené: ${[...ALLOWED_EXTENSIONS].join(', ')}`)
   }
+}
+
+const SEGMENTS: BodySegment[] = ['right_arm', 'left_arm', 'trunk', 'right_leg', 'left_leg']
+
+function parseOptionalFloat(val: FormDataEntryValue | null): number | null {
+  if (!val || val === '') return null
+  const n = parseFloat(val as string)
+  return isNaN(n) ? null : n
+}
+
+function parseEvaluation(val: FormDataEntryValue | null): SegmentalEvaluation | null {
+  if (!val || val === '') return null
+  const s = val as string
+  if (s === 'below' || s === 'normal' || s === 'above') return s
+  return null
+}
+
+function parseExtendedData(formData: FormData): InBodyExtendedData | null {
+  const ext: InBodyExtendedData = {
+    fat_kg: parseOptionalFloat(formData.get('ext_fat_kg')),
+    ffm_kg: parseOptionalFloat(formData.get('ext_ffm_kg')),
+    tbw_liters: parseOptionalFloat(formData.get('ext_tbw_liters')),
+    whr: parseOptionalFloat(formData.get('ext_whr')),
+    bmr_kcal: parseOptionalFloat(formData.get('ext_bmr_kcal')),
+    fitness_score: parseOptionalFloat(formData.get('ext_fitness_score')),
+    gender: (formData.get('ext_gender') as string) || null,
+    age: parseOptionalFloat(formData.get('ext_age')),
+    height_cm: parseOptionalFloat(formData.get('ext_height_cm')),
+  }
+
+  // Parse segmental lean
+  const segLean: Record<string, { mass_kg: number | null; evaluation: SegmentalEvaluation | null }> = {}
+  let hasSegLean = false
+  for (const seg of SEGMENTS) {
+    const mass = parseOptionalFloat(formData.get(`seg_lean_${seg}_mass`))
+    const evaluation = parseEvaluation(formData.get(`seg_lean_${seg}_eval`))
+    if (mass != null || evaluation != null) hasSegLean = true
+    segLean[seg] = { mass_kg: mass, evaluation }
+  }
+  if (hasSegLean) ext.segmental_lean = segLean as InBodyExtendedData['segmental_lean']
+
+  // Parse segmental fat
+  const segFat: Record<string, { mass_kg: number | null; evaluation: SegmentalEvaluation | null }> = {}
+  let hasSegFat = false
+  for (const seg of SEGMENTS) {
+    const mass = parseOptionalFloat(formData.get(`seg_fat_${seg}_mass`))
+    const evaluation = parseEvaluation(formData.get(`seg_fat_${seg}_eval`))
+    if (mass != null || evaluation != null) hasSegFat = true
+    segFat[seg] = { mass_kg: mass, evaluation }
+  }
+  if (hasSegFat) ext.segmental_fat = segFat as InBodyExtendedData['segmental_fat']
+
+  // Parse muscle-fat control
+  const muscleAdj = parseOptionalFloat(formData.get('ext_muscle_adjustment_kg'))
+  const fatAdj = parseOptionalFloat(formData.get('ext_fat_adjustment_kg'))
+  if (muscleAdj != null || fatAdj != null) {
+    ext.muscle_fat_control = { muscle_adjustment_kg: muscleAdj, fat_adjustment_kg: fatAdj }
+  }
+
+  // Check if any extended data was actually provided
+  const hasData = Object.values(ext).some((v) => v != null)
+  return hasData ? ext : null
 }
 
 export async function getInBodyRecords(clientId: string): Promise<import('@/types').InBodyRecord[]> {
@@ -55,6 +118,8 @@ export async function createInBodyRecord(clientId: string, formData: FormData) {
     photoUrls.push(path)
   }
 
+  const customData = parseExtendedData(formData)
+
   const { error } = await supabase.from('inbody_records').insert({
     client_id: clientId,
     measured_at: formData.get('measured_at') as string,
@@ -66,6 +131,7 @@ export async function createInBodyRecord(clientId: string, formData: FormData) {
     body_water_pct: formData.get('body_water_pct') ? parseFloat(formData.get('body_water_pct') as string) : null,
     notes: (formData.get('notes') as string) || null,
     photo_urls: photoUrls.length > 0 ? photoUrls : null,
+    ...(customData ? { custom_data: customData } : {}),
   })
   if (error) throw error
   revalidatePath('/clients/' + clientId)
@@ -94,6 +160,8 @@ export async function updateInBodyRecord(id: string, clientId: string, formData:
     photoUrls.push(path)
   }
 
+  const customData = parseExtendedData(formData)
+
   const { error } = await supabase.from('inbody_records').update({
     measured_at: formData.get('measured_at') as string,
     weight: formData.get('weight') ? parseFloat(formData.get('weight') as string) : null,
@@ -104,6 +172,7 @@ export async function updateInBodyRecord(id: string, clientId: string, formData:
     body_water_pct: formData.get('body_water_pct') ? parseFloat(formData.get('body_water_pct') as string) : null,
     notes: (formData.get('notes') as string) || null,
     photo_urls: photoUrls.length > 0 ? photoUrls : null,
+    custom_data: customData ?? {},
   }).eq('id', id)
   if (error) throw error
   revalidatePath('/clients/' + clientId)

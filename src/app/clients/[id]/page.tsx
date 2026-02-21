@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Phone, Calendar, FileText, Pencil, Plus, Package as PackageIcon, Activity, Trash2 } from 'lucide-react'
+import { Mail, Phone, Calendar, FileText, Pencil, Plus, Package as PackageIcon, Activity, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
 import { AppShell } from '@/components/layout/app-shell'
 import { PageHeader } from '@/components/ui/page-header'
 import { Tabs } from '@/components/ui/tabs'
@@ -16,12 +16,14 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { PackageCard } from '@/components/clients/package-card'
 import { SessionHistoryList } from '@/components/clients/session-history-list'
 import { InBodyChart } from '@/components/clients/inbody-chart'
+import { InBodyBodyMap } from '@/components/clients/inbody-body-map'
+import { InBodyDelta } from '@/components/clients/inbody-delta'
 import { InBodyPhotos } from '@/components/clients/inbody-photos'
 import { deleteInBodyRecord } from '@/lib/actions/inbody'
 import { CLIENT_STATUS_LABELS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import type { Client, Package as PackageType, InBodyRecord } from '@/types'
+import type { Client, Package as PackageType, InBodyRecord, InBodyExtendedData } from '@/types'
 
 const TABS = [
   { id: 'overview', label: 'Přehled' },
@@ -228,73 +230,120 @@ function InBodyTab({ clientId, records }: { clientId: string; records: InBodyRec
         />
       ) : (
         <>
+          {(() => {
+            const latestCustom = records[0]?.custom_data as InBodyExtendedData | null
+            if (latestCustom?.segmental_lean || latestCustom?.segmental_fat) {
+              return (
+                <InBodyBodyMap
+                  record={records[0]}
+                  compareRecord={records.length >= 2 ? records[1] : undefined}
+                />
+              )
+            }
+            return null
+          })()}
+
+          {records.length >= 2 && (
+            <InBodyDelta latest={records[0]} previous={records[1]} />
+          )}
+
           <InBodyChart records={records} />
 
-          {records.map((record) => (
-            <Card key={record.id}>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-text-primary">{formatDate(record.measured_at)}</span>
-                  <div className="flex items-center gap-1">
-                    <Link href={`/clients/${clientId}/inbody/${record.id}/edit`} aria-label="Upravit měření">
-                      <Pencil className="h-4 w-4 text-text-secondary" strokeWidth={1.5} />
-                    </Link>
-                    <button
-                      onClick={() => setDeleteId(record.id)}
-                      aria-label="Smazat měření"
-                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-text-tertiary transition-colors hover:text-danger"
-                    >
-                      <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-                    </button>
+          {records.map((record, idx) => {
+            const prevRecord = records[idx + 1] ?? null
+            const ext = record.custom_data as InBodyExtendedData | null
+
+            return (
+              <Card key={record.id}>
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-text-primary">{formatDate(record.measured_at)}</span>
+                    <div className="flex items-center gap-1">
+                      <Link href={`/clients/${clientId}/inbody/${record.id}/edit`} aria-label="Upravit měření">
+                        <Pencil className="h-4 w-4 text-text-secondary" strokeWidth={1.5} />
+                      </Link>
+                      <button
+                        onClick={() => setDeleteId(record.id)}
+                        aria-label="Smazat měření"
+                        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-text-tertiary transition-colors hover:text-danger"
+                      >
+                        <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  {record.weight != null && (
-                    <div>
-                      <span className="text-text-tertiary">Váha:</span>{' '}
-                      <span className="text-text-secondary">{record.weight} kg</span>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    {record.weight != null && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-text-tertiary">Váha:</span>{' '}
+                        <span className="text-text-secondary">{record.weight} kg</span>
+                        <RecordDelta current={record.weight} previous={prevRecord?.weight} increaseIsGood={false} />
+                      </div>
+                    )}
+                    {record.body_fat_pct != null && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-text-tertiary">Tuk:</span>{' '}
+                        <span className="text-text-secondary">{record.body_fat_pct}%</span>
+                        <RecordDelta current={record.body_fat_pct} previous={prevRecord?.body_fat_pct} increaseIsGood={false} />
+                      </div>
+                    )}
+                    {record.muscle_mass != null && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-text-tertiary">Svaly:</span>{' '}
+                        <span className="text-text-secondary">{record.muscle_mass} kg</span>
+                        <RecordDelta current={record.muscle_mass} previous={prevRecord?.muscle_mass} increaseIsGood={true} />
+                      </div>
+                    )}
+                    {record.bmi != null && (
+                      <div>
+                        <span className="text-text-tertiary">BMI:</span>{' '}
+                        <span className="text-text-secondary">{record.bmi}</span>
+                      </div>
+                    )}
+                    {record.visceral_fat != null && (
+                      <div>
+                        <span className="text-text-tertiary">Visc. tuk:</span>{' '}
+                        <span className="text-text-secondary">{record.visceral_fat}</span>
+                      </div>
+                    )}
+                    {record.body_water_pct != null && (
+                      <div>
+                        <span className="text-text-tertiary">Voda:</span>{' '}
+                        <span className="text-text-secondary">{record.body_water_pct}%</span>
+                      </div>
+                    )}
+                  </div>
+                  {(ext?.ffm_kg != null || ext?.bmr_kcal != null || ext?.fitness_score != null) && (
+                    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      {ext?.ffm_kg != null && (
+                        <div>
+                          <span className="text-text-tertiary">FFM:</span>{' '}
+                          <span className="text-text-secondary">{ext.ffm_kg} kg</span>
+                        </div>
+                      )}
+                      {ext?.bmr_kcal != null && (
+                        <div>
+                          <span className="text-text-tertiary">BMR:</span>{' '}
+                          <span className="text-text-secondary">{ext.bmr_kcal} kcal</span>
+                        </div>
+                      )}
+                      {ext?.fitness_score != null && (
+                        <div>
+                          <span className="text-text-tertiary">Fitness skóre:</span>{' '}
+                          <span className="text-text-secondary">{ext.fitness_score}</span>
+                        </div>
+                      )}
                     </div>
                   )}
-                  {record.body_fat_pct != null && (
-                    <div>
-                      <span className="text-text-tertiary">Tuk:</span>{' '}
-                      <span className="text-text-secondary">{record.body_fat_pct}%</span>
-                    </div>
+                  {record.photo_urls && record.photo_urls.length > 0 && (
+                    <InBodyPhotos paths={record.photo_urls} />
                   )}
-                  {record.muscle_mass != null && (
-                    <div>
-                      <span className="text-text-tertiary">Svaly:</span>{' '}
-                      <span className="text-text-secondary">{record.muscle_mass} kg</span>
-                    </div>
+                  {record.notes && (
+                    <p className="mt-2 text-sm text-text-secondary">{record.notes}</p>
                   )}
-                  {record.bmi != null && (
-                    <div>
-                      <span className="text-text-tertiary">BMI:</span>{' '}
-                      <span className="text-text-secondary">{record.bmi}</span>
-                    </div>
-                  )}
-                  {record.visceral_fat != null && (
-                    <div>
-                      <span className="text-text-tertiary">Visc. tuk:</span>{' '}
-                      <span className="text-text-secondary">{record.visceral_fat}</span>
-                    </div>
-                  )}
-                  {record.body_water_pct != null && (
-                    <div>
-                      <span className="text-text-tertiary">Voda:</span>{' '}
-                      <span className="text-text-secondary">{record.body_water_pct}%</span>
-                    </div>
-                  )}
-                </div>
-                {record.photo_urls && record.photo_urls.length > 0 && (
-                  <InBodyPhotos paths={record.photo_urls} />
-                )}
-                {record.notes && (
-                  <p className="mt-2 text-sm text-text-secondary">{record.notes}</p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </>
       )}
 
@@ -309,5 +358,28 @@ function InBodyTab({ clientId, records }: { clientId: string; records: InBodyRec
         loading={deleting}
       />
     </div>
+  )
+}
+
+function RecordDelta({
+  current,
+  previous,
+  increaseIsGood,
+}: {
+  current: number
+  previous: number | null | undefined
+  increaseIsGood: boolean
+}) {
+  if (previous == null) return null
+  const delta = current - previous
+  if (delta === 0) return null
+  const isGood = increaseIsGood ? delta > 0 : delta < 0
+  const Icon = delta > 0 ? TrendingUp : TrendingDown
+  const colorClass = isGood ? 'text-success' : 'text-danger'
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs ${colorClass}`}>
+      <Icon className="h-3 w-3" strokeWidth={1.5} />
+    </span>
   )
 }

@@ -23,6 +23,13 @@ export async function getTrainerProfile(): Promise<import('@/types').Trainer> {
   return data as import('@/types').Trainer
 }
 
+export async function getGeminiStatus(): Promise<{ configured: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Neautorizovaný přístup')
+  return { configured: !!process.env.GEMINI_API_KEY }
+}
+
 export async function updateTrainerProfile(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

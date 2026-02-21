@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { ProfileForm } from '@/components/settings/profile-form'
 import { IcsSection } from '@/components/settings/ics-section'
 import { SignOutButton } from '@/components/settings/sign-out-button'
+import { GeminiStatus } from '@/components/settings/gemini-status'
 import { getTrainerProfile } from '@/lib/actions/settings'
 
 export default async function SettingsPage() {
@@ -31,6 +32,14 @@ export default async function SettingsPage() {
             Kalendář
           </h2>
           <IcsSection icsToken={trainer.ics_token} />
+        </section>
+
+        {/* Gemini OCR Section */}
+        <section>
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-text-tertiary">
+            OCR Rozpoznávání
+          </h2>
+          <GeminiStatus />
         </section>
 
         {/* Sign Out Section */}

@@ -44,3 +44,37 @@ export type SessionWithDetails = Session & {
 export type PackageWithClient = Package & {
   clients: Pick<Client, 'id' | 'name'>
 }
+
+// InBody extended data stored in custom_data JSONB column
+
+export type BodySegment = 'right_arm' | 'left_arm' | 'trunk' | 'right_leg' | 'left_leg'
+
+export type SegmentalEvaluation = 'below' | 'normal' | 'above'
+
+export type SegmentalLeanEntry = {
+  mass_kg: number | null
+  evaluation: SegmentalEvaluation | null
+}
+
+export type SegmentalFatEntry = {
+  mass_kg: number | null
+  evaluation: SegmentalEvaluation | null
+}
+
+export type InBodyExtendedData = {
+  fat_kg?: number | null
+  ffm_kg?: number | null
+  tbw_liters?: number | null
+  whr?: number | null
+  bmr_kcal?: number | null
+  fitness_score?: number | null
+  gender?: string | null
+  age?: number | null
+  height_cm?: number | null
+  muscle_fat_control?: {
+    muscle_adjustment_kg?: number | null
+    fat_adjustment_kg?: number | null
+  } | null
+  segmental_lean?: Record<BodySegment, SegmentalLeanEntry> | null
+  segmental_fat?: Record<BodySegment, SegmentalFatEntry> | null
+}

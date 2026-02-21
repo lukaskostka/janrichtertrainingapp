@@ -4,19 +4,46 @@ import { useState, useMemo } from 'react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
-import type { InBodyRecord } from '@/types'
+import type { InBodyRecord, InBodyExtendedData } from '@/types'
 
 interface InBodyChartProps {
   records: InBodyRecord[]
 }
 
-type MetricKey = 'weight' | 'body_fat_pct' | 'muscle_mass'
+type MetricKey = 'weight' | 'body_fat_pct' | 'muscle_mass' | 'bmi' | 'ffm_kg' | 'bmr_kcal' | 'fitness_score'
 
-const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] = [
+type MetricDef = { key: MetricKey; label: string; unit: string; color: string; extended?: boolean }
+
+const CORE_METRICS: MetricDef[] = [
   { key: 'weight', label: 'Váha', unit: 'kg', color: '#FFFFFF' },
   { key: 'body_fat_pct', label: 'Tělesný tuk', unit: '%', color: '#F59E0B' },
   { key: 'muscle_mass', label: 'Svalová hmota', unit: 'kg', color: '#22C55E' },
 ]
+
+const EXTENDED_METRICS: MetricDef[] = [
+  { key: 'bmi', label: 'BMI', unit: '', color: '#8B5CF6', extended: true },
+  { key: 'ffm_kg', label: 'FFM', unit: 'kg', color: '#06B6D4', extended: true },
+  { key: 'bmr_kcal', label: 'BMR', unit: 'kcal', color: '#EC4899', extended: true },
+  { key: 'fitness_score', label: 'Skóre', unit: '', color: '#14B8A6', extended: true },
+]
+
+const ALL_METRICS: MetricDef[] = [...CORE_METRICS, ...EXTENDED_METRICS]
+
+function getMetricValue(record: InBodyRecord, key: MetricKey): number | null {
+  switch (key) {
+    case 'weight':
+    case 'body_fat_pct':
+    case 'muscle_mass':
+    case 'bmi':
+      return record[key] ?? null
+    case 'ffm_kg':
+    case 'bmr_kcal':
+    case 'fitness_score':
+      return (record.custom_data as InBodyExtendedData)?.[key] ?? null
+    default:
+      return null
+  }
+}
 
 export function InBodyChart({ records }: InBodyChartProps) {
   const [activeMetric, setActiveMetric] = useState<MetricKey>('weight')
@@ -27,10 +54,19 @@ export function InBodyChart({ records }: InBodyChartProps) {
     [records]
   )
 
-  const metric = METRICS.find((m) => m.key === activeMetric)!
+  // Determine which extended metrics have data in any record
+  const availableExtended = useMemo(
+    () => EXTENDED_METRICS.filter((m) => records.some((r) => getMetricValue(r, m.key) != null)),
+    [records]
+  )
+
+  const metric = ALL_METRICS.find((m) => m.key === activeMetric)!
 
   const chartData = useMemo(
-    () => sorted.filter((r) => r[activeMetric] != null).map((r) => ({ date: formatDate(r.measured_at), value: r[activeMetric] as number })),
+    () =>
+      sorted
+        .filter((r) => getMetricValue(r, activeMetric) != null)
+        .map((r) => ({ date: formatDate(r.measured_at), value: getMetricValue(r, activeMetric) as number })),
     [sorted, activeMetric]
   )
 
@@ -39,8 +75,21 @@ export function InBodyChart({ records }: InBodyChartProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          {METRICS.map((m) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {CORE_METRICS.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setActiveMetric(m.key)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                activeMetric === m.key
+                  ? 'bg-accent text-black'
+                  : 'bg-card text-text-secondary hover:bg-elevated'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+          {availableExtended.map((m) => (
             <button
               key={m.key}
               onClick={() => setActiveMetric(m.key)}
