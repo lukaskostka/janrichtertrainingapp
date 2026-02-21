@@ -71,6 +71,14 @@ body {
 /* Prevent inputs from overflowing their containers */
 input, select, textarea {
   max-width: 100%;
+  min-width: 0;
+}
+
+/* iOS date/time inputs overflow fix */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  width: 100%;
 }
 
 /* Dark scrollbar */
